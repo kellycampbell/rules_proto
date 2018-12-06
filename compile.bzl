@@ -1,4 +1,5 @@
 load("//:plugin.bzl", "ProtoPluginInfo")
+load("@bazel_skylib//lib:paths.bzl", "paths")
 
 ProtoCompileInfo = provider(fields = {
     "label": "label object",
@@ -103,6 +104,16 @@ def _pascal_case(s):
     return "".join([_capitalize(part) for part in s.split("_")])
 
 
+def _underscore(s):
+    """Convert package-name -> package_name
+    Args:
+        s (string): The input string to be modified.
+    Returns:
+        (string): The string with dashes replaced by underscores.
+    """
+    return "_".join([part for part in s.split("-")])
+
+
 def _rust_keyword(s):
     """Check if arg is a rust keyword and append '_pb' if true.
     Args:
@@ -123,17 +134,27 @@ def _get_output_sibling_file(pattern, proto, descriptor):
     uses the descriptor as the sibling (which declares the output file will be
     in the root of the generated tree).
 
+    Another special prefix '{proto|snake}' can be used to replace the dashes
+    in the proto's directory path with underscores. This will return a path
+    as a string where the output files will go based on the location of the
+    proto files.
+
     Args:
       pattern: the input filename pattern <string>
       proto: the .proto <Generated File> (in the staging area)
       descriptor: the descriptor <File> that marks the staging root.
     
     Returns:
-      the <File> to be used as the correct sibling.
+      the <File> to be used as the correct sibling, or the directory path as a
+        string where the output goes
     """
 
     if pattern.startswith("{package}/"):
         return descriptor
+    elif pattern.startswith("{proto|snake}/"):
+        print("pattern = %r" % pattern)
+        return paths.dirname(pattern).replace("{proto|snake}",
+            _underscore(paths.dirname(proto.short_path)))
     return proto
 
 
@@ -171,6 +192,8 @@ def _get_output_filename(src, plugin, pattern):
     # Slice off this prefix if it exists, we don't use it here.
     if pattern.startswith("{package}/"):
         pattern = pattern[len("{package}/"):]
+    if pattern.startswith("{proto|snake}/"):
+        pattern = pattern[len("{proto|snake}/"):]
     basename = src.basename
     if basename.endswith(".proto"):
         basename = basename[:-6]
@@ -178,6 +201,7 @@ def _get_output_filename(src, plugin, pattern):
         basename = basename[:-11]
 
     filename = basename
+    # print("filename = %r" % filename)
    
     if pattern.find("{basename}") != -1:
         filename = pattern.replace("{basename}", basename)
@@ -190,6 +214,7 @@ def _get_output_filename(src, plugin, pattern):
     else:
         filename = basename + pattern
 
+    # print("filename = %r" % filename)
     return filename
 
 
@@ -289,8 +314,11 @@ def get_plugin_out_arg(ctx, outdir, plugin, plugin_outfiles):
     """
 
     arg = outdir
+    print("outdir arg = %r" % outdir)
     if plugin.outdir:
         arg = plugin.outdir.replace("{name}", outdir)
+        arg = plugin.outdir.replace("{genfiles}", ctx.genfiles_dir.path)
+        # print("plugin outdir = %r" % arg)
     elif plugin.out:
         outfile = plugin_outfiles[plugin.name]
         #arg = "%s" % (outdir)
@@ -359,9 +387,14 @@ def _get_plugin_outputs(ctx, descriptor, outputs, src, proto, plugin):
         if not filename:
             continue
         sibling = _get_output_sibling_file(output, proto, descriptor)
-        outputs.append(ctx.actions.declare_file(filename, sibling = sibling))
+        if type(sibling) == 'File':
+            outputs.append(ctx.actions.declare_file(filename, sibling=sibling))
+        else:
+            # The package name had to be transformed, e.g. foo-bar -> foo_bar
+            package = paths.relativize(sibling, ctx.label.package)
+            filepath = package + '/' + filename
+            outputs.append(ctx.actions.declare_file(filepath))
     return outputs
-
 
 
 def get_plugin_runfiles(tool):

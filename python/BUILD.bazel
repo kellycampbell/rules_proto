@@ -3,13 +3,15 @@ load("//:plugin.bzl", "proto_plugin")
 
 proto_plugin(
     name = "python",
-    outputs = ["_pb2.py"],
+    # outputs = ["{package}/_pb2.py"],
+    outputs = ["{proto|snake}/{basename}_pb2.py"],
     visibility = ["//visibility:public"],
 )
 
 proto_plugin(
     name = "grpc_python",
-    outputs = ["_pb2_grpc.py"],
+    # outputs = ["_pb2_grpc.py"],
+    outputs = ["{proto|snake}/{basename}_pb2_grpc.py"],
     tool = "@com_github_grpc_grpc//:grpc_python_plugin",
     visibility = ["//visibility:public"],
 )

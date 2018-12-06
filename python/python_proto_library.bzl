@@ -6,6 +6,7 @@ def python_proto_library(**kwargs):
     deps = kwargs.get("deps")
     verbose = kwargs.get("verbose")
     visibility = kwargs.get("visibility")
+    outputs = kwargs.get("outputs")
 
     name_pb = name + "_pb"
     python_proto_compile(
@@ -14,6 +15,7 @@ def python_proto_library(**kwargs):
         visibility = visibility,
         transitive = True,
         verbose = verbose,
+        outputs = outputs,
     )
 
     native.py_library(
