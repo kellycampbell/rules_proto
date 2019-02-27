@@ -141,8 +141,8 @@ def com_google_protobuf(**kwargs):
 
 def com_github_grpc_grpc(**kwargs):
     name = "com_github_grpc_grpc"
-    ref = get_ref(name, "v1.18.0", kwargs)
-    sha256 = get_sha256(name, "069a52a166382dd7b99bf8e7e805f6af40d797cfcee5f80e530ca3fc75fd06e2", kwargs)
+    ref = get_ref(name, "v1.19.0", kwargs)
+    sha256 = get_sha256(name, "1d54cd95ed276c42c276e0a3df8ab33ee41968b73af14023c03a19db48f82e73", kwargs)
     github_archive(name, "grpc", "grpc", ref, sha256)
 
 # NOTE(pcj): Using a different version of dotnet here that seems to have a bad assembly reference.
